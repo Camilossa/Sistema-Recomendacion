@@ -12,7 +12,7 @@ nltk.download('stopwords')
 
 # Load data
 df = pd.DataFrame()
-pkls = Path('./borges/datasets/datasets_pkl').glob('*texts.pkl') 
+pkls = Path('./borges').glob('*texts.pkl') 
 
 # Read all pickle files and concatenate into a DataFrame
 for pkl in pkls:
