@@ -6,51 +6,56 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
 import nltk
 from nltk.corpus import stopwords
+from unidecode import unidecode  # Librería para eliminar tildes y acentos
 
 # Descarga de stopwords
 nltk.download('stopwords')
 
-# Load data
+# Cargar los datos
 df = pd.DataFrame()
 pkls = Path('./borges').glob('*texts.pkl') 
 
-# Read all pickle files and concatenate into a DataFrame
+# Leer todos los archivos pickle y concatenarlos en un DataFrame
 for pkl in pkls:
     with open(pkl, 'rb') as inp:
         df_ = pickle.load(inp)
     df = pd.concat([df, df_])
 
 df = df.drop_duplicates(subset=[c for c in df.columns if c != 'text_metadata'])
-# Reset index to avoid index mismatch issues
+# Reiniciar el índice para evitar problemas de desajuste
 df = df.reset_index(drop=True)
 
-# Extract title and author from metadata
+# Extraer título y autor de los metadatos
 df['title'] = df['text_metadata'].apply(lambda x: x['title'])
 df['author'] = df['text_metadata'].apply(lambda x: x['author'])
 
-# Prepare stop words
+# Preparar las stopwords
 stop = list(stopwords.words('spanish'))
 
-# Create TF-IDF vectorizer
+# Crear el vectorizador TF-IDF
 tf = TfidfVectorizer(stop_words=stop)
 
-# Compute features for each item (text)
+# Calcular las características para cada elemento (texto)
 tfidf_matrix = tf.fit_transform(df['text'])
 
-# Calculate cosine similarities between all documents
+# Calcular las similitudes coseno entre todos los documentos
 cosine_similarities = linear_kernel(tfidf_matrix, tfidf_matrix)
-n = 6
+n = 6  # Número de recomendaciones a mostrar
 
-# Dictionary to store results
+# Diccionario para almacenar resultados con claves normalizadas (minúsculas y sin acentos)
 results = {}
 for idx, row in df.iterrows():
+    # Normalizar la clave convirtiéndola a minúsculas y eliminando acentos
+    key = unidecode(f"{row['author'].lower()} - {row['title'].lower()}")
     similar_indices = cosine_similarities[idx].argsort()[:-n-2:-1]
     similar_items = [(f"{df['author'][i]} - {df['title'][i]}", round(cosine_similarities[idx][i], 3)) for i in similar_indices]
-    results[f"{row['author']} - {row['title']}"] = similar_items[1:]
+    results[key] = similar_items[1:]
 
-# Recommendation function
+# Función de recomendación con coincidencia insensible a mayúsculas y acentos
 def recomendar(autor, titulo):
-    recomendaciones = results.get(f"{autor} - {titulo}", "No se encontraron resultados")
+    # Normalizar la entrada convirtiéndola a minúsculas y eliminando acentos
+    key = unidecode(f"{autor.lower()} - {titulo.lower()}")
+    recomendaciones = results.get(key, "No se encontraron resultados")
     
     if isinstance(recomendaciones, str):
         return recomendaciones  # Retornar el mensaje de error si no hay resultados
@@ -60,7 +65,7 @@ def recomendar(autor, titulo):
     return formatted_result
 
 
-# Custom CSS for background image
+# CSS personalizado para la imagen de fondo
 st.markdown(
     """
     <style>
@@ -75,19 +80,19 @@ st.markdown(
 )
 
 
-# Streamlit Interface
+# Interfaz en Streamlit
 st.title("Recomendador de Autores y Libros")
 
-# Input fields for author and title without default values
+# Campos de entrada para autor y título sin valores predeterminados
 autor = st.text_input("Ingrese el Autor")
 titulo = st.text_input("Ingrese el Título")
 
 if st.button("Recomendar"):
-    # Call the recommendation function and display the results
+    # Llamar a la función de recomendación y mostrar los resultados
     recomendaciones = recomendar(autor, titulo)
     container = st.container()
 
-    # Display recommendations inside the container with a black background
+    # Mostrar recomendaciones dentro del contenedor con fondo negro
     with container:
         st.markdown(
             """
