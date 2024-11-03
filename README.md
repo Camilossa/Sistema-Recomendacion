@@ -47,7 +47,7 @@ deactivate
 pip install -r requirements.txt
 ```
 
-### Corre el código ejecutando la linea
+### 4. Corre el código ejecutando la linea
 ```bash
 streamlit run app.py
 ```
